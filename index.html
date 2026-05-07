@@ -129,6 +129,10 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
       <h2 class="filterTitle">필터</h2>
       <div class="stack">
         <div>
+          <div class="label">제품/상품 구분</div>
+          <select id="productTypeFilter"><option value="">전체 구분</option></select>
+        </div>
+        <div>
           <div class="label">모델명</div>
           <select id="modelFilter"><option value="">전체 모델</option></select>
         </div>
@@ -219,7 +223,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 <script>
 const DEFAULT_SHEET_ID = "1tEY4sew1Tmhxz9QcCp8WYSkqtOJdL8Jut5glCqiMqRo";
 const DEFAULT_GID = "0";
-const required = ["월","권역","모델","색상","수량"];
+const required = ["월","권역","모델","색상","수량","제/상품"];
 let rawRows = [];
 let charts = {};
 let selectedRegions = new Set();
@@ -327,6 +331,7 @@ function parseRows(rows){
       세부권역: clean(r["세부권역"]) || "미지정",
       모델: clean(r["모델"]) || "미지정",
       색상: clean(r["색상"]) || "미지정",
+      제품상품: clean(r["제/상품"]) || "미지정",
       __qty: normalizeQty(r["수량"]),
       원본:r
     }))
@@ -336,11 +341,13 @@ function parseRows(rows){
 function buildFilters(){
   const models = uniq(rawRows.map(r=>r.모델));
   const colors = uniq(rawRows.map(r=>r.색상));
+  const productTypes = uniq(rawRows.map(r=>r.제품상품));
   const regions = uniq(rawRows.map(r=>r.권역));
   selectedRegions = new Set(regions);
 
   $("modelFilter").innerHTML = `<option value="">전체 모델</option>` + models.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
   $("colorFilter").innerHTML = `<option value="">전체 컬러</option>` + colors.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
+  $("productTypeFilter").innerHTML = `<option value="">전체 구분</option>` + productTypes.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
   $("regionChips").innerHTML = regions.map(v => `<button class="chip active" data-region="${escapeAttr(v)}">${escapeHtml(v)}</button>`).join("");
 
   document.querySelectorAll(".chip[data-region]").forEach(btn=>{
@@ -356,9 +363,11 @@ function buildFilters(){
 function getFilteredRows(){
   const model = $("modelFilter").value;
   const color = $("colorFilter").value;
+  const productType = $("productTypeFilter").value;
   return rawRows.filter(r =>
     (!model || r.모델 === model) &&
     (!color || r.색상 === color) &&
+    (!productType || r.제품상품 === productType) &&
     selectedRegions.has(r.권역)
   );
 }
@@ -474,8 +483,8 @@ function drawTable(rows, total){
 
 function exportFilteredCsv(){
   const rows = getFilteredRows();
-  const header = ["월","권역","세부권역","모델","색상","수량"];
-  const body = rows.map(r=>[r.월,r.권역,r.세부권역,r.모델,r.색상,r.__qty]);
+  const header = ["월","권역","세부권역","모델","색상","제/상품","수량"];
+  const body = rows.map(r=>[r.월,r.권역,r.세부권역,r.모델,r.색상,r.제품상품,r.__qty]);
   const csv = [header,...body].map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
   const blob = new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
   const a = document.createElement("a");
@@ -492,6 +501,7 @@ $("reloadBtn").addEventListener("click",loadData);
 $("resetBtn").addEventListener("click",()=>{$("sheetId").value=DEFAULT_SHEET_ID;$("gid").value=DEFAULT_GID;loadData();});
 $("modelFilter").addEventListener("change",updateDashboard);
 $("colorFilter").addEventListener("change",updateDashboard);
+$("productTypeFilter").addEventListener("change",updateDashboard);
 $("exportBtn").addEventListener("click",exportFilteredCsv);
 loadData();
 </script>
