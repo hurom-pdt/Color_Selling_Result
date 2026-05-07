@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>컬러 생산 실적 연동형 대시보드</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#f7f8f6;
+  --panel:#ffffff;
+  --text:#171717;
+  --muted:#6b7280;
+  --line:#e5e7eb;
+  --brand:#6fb92c;
+  --brand-dark:#4f8f1c;
+  --shadow:0 18px 50px rgba(15,23,42,.08);
+  --radius:22px;
+}
+*{box-sizing:border-box}
+body{
+  margin:0;
+  background:linear-gradient(180deg,#fafbf8 0%,#f3f5f0 100%);
+  color:var(--text);
+  font-family:Arial,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+}
+.wrap{max-width:1640px;margin:0 auto;padding:28px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:24px;margin-bottom:22px}
+.brand{display:flex;gap:14px;align-items:flex-start}
+.mark{width:44px;height:12px;background:var(--brand);border-radius:20px;margin-top:8px;flex:0 0 auto}
+h1{font-size:32px;line-height:1.15;margin:0 0 8px;font-weight:850;letter-spacing:-.04em}
+h2{font-size:18px;margin:0 0 6px;font-weight:850;letter-spacing:-.035em}
+.sub{color:var(--muted);font-size:14px;line-height:1.55}
+.sourceBox{background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:var(--radius);padding:16px;min-width:520px}
+.sourceTitle{font-size:13px;font-weight:800;margin-bottom:10px}
+.sourceGrid{display:grid;grid-template-columns:1fr 96px 86px 84px;gap:8px}
+input,select,button{font:inherit}
+input,select{height:42px;border:1px solid var(--line);border-radius:13px;background:#fff;padding:0 12px;outline:none;min-width:0}
+input:focus,select:focus{border-color:var(--brand);box-shadow:0 0 0 3px rgba(111,185,44,.14)}
+button{height:42px;border:0;border-radius:13px;background:#171717;color:#fff;padding:0 14px;cursor:pointer;font-weight:750}
+button.secondary{background:#eef5e7;color:#315d14}
+button.ghost{background:#f3f4f6;color:#111827}
+.hint{font-size:12px;color:var(--muted);margin-top:9px;line-height:1.45}
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.metric{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;box-shadow:0 8px 30px rgba(15,23,42,.05)}
+.metric .k{font-size:12px;color:var(--muted);margin-bottom:8px}
+.metric .v{font-size:26px;font-weight:850;letter-spacing:-.03em;line-height:1.1}
+.metric .s{font-size:12px;color:var(--muted);margin-top:8px}
+.layout{display:grid;grid-template-columns:260px 1fr 360px;gap:18px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.pad{padding:18px}
+.filterTitle{font-size:14px;font-weight:850;margin:0 0 14px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.label{font-size:12px;color:#4b5563;font-weight:750;margin-bottom:6px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:#fff;color:#111827;font-size:13px;cursor:pointer}
+.chip.active{background:#171717;color:#fff;border-color:#171717}
+.mainTools{display:flex;gap:10px;margin-bottom:14px;align-items:center}
+.mainTools input{flex:1}
+.chartPanel{margin-bottom:18px}
+.chartHead{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.chartSub{font-size:13px;color:var(--muted);line-height:1.45}
+.chartWrap{height:320px;position:relative}
+.chartWrap.tall{height:380px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.tableWrap{max-height:430px;overflow:auto;border-top:1px solid var(--line);margin-top:18px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:11px 9px;border-bottom:1px solid var(--line);text-align:left;white-space:nowrap}
+th{font-size:12px;color:#4b5563;background:#f9fafb;position:sticky;top:0;z-index:1}
+td.num{text-align:right;font-variant-numeric:tabular-nums}
+.status{display:inline-flex;align-items:center;gap:7px;font-size:12px;color:var(--muted);line-height:1.45}
+.statusBox{margin-top:12px;padding:12px 13px;border:1px solid var(--line);border-radius:16px;background:#f9fafb;color:var(--muted);font-size:12px;line-height:1.45;white-space:pre-line}
+.statusBox.err{background:#fff1f2;color:#b91c1c;border-color:#fecdd3}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--brand);flex:0 0 auto}
+.sideMetric{display:grid;grid-template-columns:1fr;gap:12px}
+.rankList{display:flex;flex-direction:column;gap:10px;margin-top:12px}
+.rankItem{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff}
+.rankName{font-size:14px;font-weight:850;letter-spacing:-.02em}
+.rankMeta{font-size:12px;color:var(--muted);margin-top:4px}
+.loading{position:fixed;right:28px;bottom:28px;background:#171717;color:white;border-radius:999px;padding:12px 18px;font-size:13px;font-weight:800;box-shadow:var(--shadow);display:none;z-index:10}
+@media(max-width:1260px){
+  .layout{grid-template-columns:1fr}
+  .sourceBox{min-width:0;width:100%}
+  header{flex-direction:column}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .sourceGrid{grid-template-columns:1fr 84px}
+  .two{grid-template-columns:1fr}
+}
+@media(max-width:680px){
+  .wrap{padding:18px}
+  .metrics{grid-template-columns:1fr}
+  h1{font-size:27px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <div class="mark"></div>
+      <div>
+        <h1>컬러 생산 실적<br>연동형 대시보드</h1>
+        <div class="sub">2025년 매출현황 구글시트를 불러와 모델·컬러·권역·월별 수량을 재계산하는 관리 화면.</div>
+      </div>
+    </div>
+
+    <div class="sourceBox">
+      <div class="sourceTitle">구글시트 연동 설정</div>
+      <div class="sourceGrid">
+        <input id="sheetId" value="1tEY4sew1Tmhxz9QcCp8WYSkqtOJdL8Jut5glCqiMqRo" />
+        <input id="gid" value="0" title="시트 gid" />
+        <button id="reloadBtn">연동</button>
+        <button id="resetBtn" class="ghost">기본값</button>
+      </div>
+      <div class="hint">구글시트 탭 주소 끝의 gid 숫자가 실제 데이터 탭과 일치해야 한다. CSV fetch 대신 구글 비주얼라이제이션 방식으로 로딩한다.</div>
+      <div id="loadStatus" class="statusBox">연동 대기 중</div>
+    </div>
+  </header>
+
+  <section class="metrics">
+    <div class="metric"><div class="k">전체 수량</div><div class="v" id="totalQty">-</div><div class="s">선택 필터 기준</div></div>
+    <div class="metric"><div class="k">월평균 수량</div><div class="v" id="avgQty">-</div><div class="s">선택 기간 기준</div></div>
+    <div class="metric"><div class="k">TOP 컬러</div><div class="v" id="topColor">-</div><div class="s" id="topColorQty">-</div></div>
+    <div class="metric"><div class="k">TOP 권역</div><div class="v" id="topRegion">-</div><div class="s" id="topRegionQty">-</div></div>
+  </section>
+
+  <section class="layout">
+    <aside class="panel pad">
+      <h2 class="filterTitle">필터</h2>
+      <div class="stack">
+        <div>
+          <div class="label">모델명</div>
+          <select id="modelFilter"><option value="">전체 모델</option></select>
+        </div>
+        <div>
+          <div class="label">컬러</div>
+          <select id="colorFilter"><option value="">전체 컬러</option></select>
+        </div>
+        <div>
+          <div class="label">권역</div>
+          <div class="chips" id="regionChips"></div>
+        </div>
+        <button class="secondary" id="exportBtn">필터 결과 CSV 저장</button>
+        <div class="status"><span class="dot"></span><span id="sourceStatus">구글시트 연동형</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <section class="panel pad chartPanel">
+        <div class="chartHead">
+          <div>
+            <h2>월별 전체 수량</h2>
+            <div class="chartSub">선택 필터 기준 월별 출고·매출 수량 합계.</div>
+          </div>
+          <div class="status"><span class="dot"></span><span id="periodBadge">기간 -</span></div>
+        </div>
+        <div class="chartWrap tall"><canvas id="monthlyChart"></canvas></div>
+      </section>
+
+      <section class="panel pad chartPanel">
+        <div class="chartHead">
+          <div>
+            <h2>모델별 월 추이</h2>
+            <div class="chartSub">선택 필터 안에서 수량 상위 5개 모델의 월별 흐름.</div>
+          </div>
+          <div class="status"><span class="dot"></span><span id="recordBadge">레코드 0건</span></div>
+        </div>
+        <div class="chartWrap"><canvas id="modelChart"></canvas></div>
+      </section>
+
+      <section class="two">
+        <div class="panel pad chartPanel">
+          <h2>컬러별 수량</h2>
+          <div class="chartSub">상위 컬러 기준 수량 비교.</div>
+          <div class="chartWrap"><canvas id="colorChart"></canvas></div>
+        </div>
+        <div class="panel pad chartPanel">
+          <h2>권역별 수량</h2>
+          <div class="chartSub">선택 필터 기준 권역별 실적.</div>
+          <div class="chartWrap"><canvas id="regionChart"></canvas></div>
+        </div>
+      </section>
+
+      <section class="panel pad">
+        <h2>상세 요약 테이블</h2>
+        <div class="chartSub">모델·컬러·권역 조합별 총수량 상위 항목.</div>
+        <div class="tableWrap">
+          <table>
+            <thead><tr><th>순위</th><th>모델</th><th>컬러</th><th>권역</th><th>수량</th><th>비중</th></tr></thead>
+            <tbody id="summaryTable"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <aside class="panel pad">
+      <h2 class="filterTitle">실적 랭킹</h2>
+      <div class="sideMetric">
+        <div class="rankItem">
+          <div class="rankName">현재 데이터</div>
+          <div class="rankMeta" id="sideRecord">-</div>
+        </div>
+        <div class="rankItem">
+          <div class="rankName">상위 컬러</div>
+          <div class="rankMeta" id="sideColors">-</div>
+        </div>
+        <div class="rankItem">
+          <div class="rankName">상위 모델</div>
+          <div class="rankMeta" id="sideModels">-</div>
+        </div>
+      </div>
+      <div class="rankList" id="rankList"></div>
+    </aside>
+  </section>
+</div>
+
+<div class="loading" id="loading">데이터 불러오는 중</div>
+
+<script>
+const DEFAULT_SHEET_ID = "1tEY4sew1Tmhxz9QcCp8WYSkqtOJdL8Jut5glCqiMqRo";
+const DEFAULT_GID = "0";
+const required = ["월","권역","모델","색상","수량"];
+let rawRows = [];
+let charts = {};
+let selectedRegions = new Set();
+let timeoutHandle = null;
+
+const $ = id => document.getElementById(id);
+const fmt = n => Number(n || 0).toLocaleString("ko-KR");
+const clean = v => String(v ?? "").trim();
+const normalizeQty = v => Number(String(v ?? "0").replace(/[,\s]/g,"")) || 0;
+const monthLabel = v => {
+  const raw = clean(v);
+  const s = raw.replace(/\D/g,"");
+  if(s.length >= 6) return `${s.slice(0,4)}.${s.slice(4,6)}`;
+  return raw || "-";
+};
+const uniq = arr => [...new Set(arr.filter(Boolean))].sort((a,b)=>String(a).localeCompare(String(b),"ko"));
+const sumBy = (rows, keyFn) => rows.reduce((acc,r)=>{const k=keyFn(r)||"미지정";acc[k]=(acc[k]||0)+r.__qty;return acc;},{});
+const topEntry = obj => Object.entries(obj).sort((a,b)=>b[1]-a[1])[0] || ["-",0];
+
+function setStatus(msg, err=false){
+  const el = $("loadStatus");
+  el.textContent = msg;
+  el.className = "statusBox" + (err ? " err" : "");
+}
+function setLoading(on){ $("loading").style.display = on ? "block" : "none"; }
+
+function loadData(){
+  const sheetId = $("sheetId").value.trim();
+  const gid = $("gid").value.trim() || "0";
+  if(!sheetId){ setStatus("문서 ID가 비어 있다.", true); return; }
+
+  setLoading(true);
+  setStatus("구글시트 연결 중...");
+  rawRows = [];
+
+  window.google = window.google || {};
+  window.google.visualization = window.google.visualization || {};
+  window.google.visualization.Query = window.google.visualization.Query || {};
+  window.google.visualization.Query.setResponse = function(response){
+    clearTimeout(timeoutHandle);
+    try{
+      if(response.status === "error") {
+        const msg = (response.errors || []).map(e=>e.detailed_message || e.message).join("\n");
+        throw new Error(msg || "구글시트 응답 오류");
+      }
+      const rows = tableToObjects(response.table);
+      const headers = Object.keys(rows[0] || {});
+      const missing = required.filter(h => !headers.includes(h));
+      if(missing.length) throw new Error("누락 컬럼: " + missing.join(", ") + "\n현재 인식 컬럼: " + headers.join(", "));
+      rawRows = parseRows(rows);
+      buildFilters();
+      updateDashboard();
+      setStatus(`연동 완료: ${fmt(rawRows.length)}건 로드`);
+      $("sourceStatus").textContent = "구글시트 연동 완료";
+    }catch(e){
+      console.error(e);
+      setStatus("불러오기 실패.\n" + e.message, true);
+      $("sourceStatus").textContent = "연동 실패";
+    }finally{
+      setLoading(false);
+      const old = document.getElementById("gvizLoader");
+      if(old) old.remove();
+    }
+  };
+
+  const old = document.getElementById("gvizLoader");
+  if(old) old.remove();
+
+  const script = document.createElement("script");
+  script.id = "gvizLoader";
+  script.src = `https://docs.google.com/spreadsheets/d/${encodeURIComponent(sheetId)}/gviz/tq?gid=${encodeURIComponent(gid)}&headers=1&tqx=out:json`;
+  script.onerror = () => {
+    clearTimeout(timeoutHandle);
+    setLoading(false);
+    setStatus("스크립트 로딩 실패. 시트가 공개/게시 상태인지 확인해야 한다.", true);
+    $("sourceStatus").textContent = "연동 실패";
+  };
+  document.body.appendChild(script);
+
+  timeoutHandle = setTimeout(()=>{
+    setLoading(false);
+    setStatus("응답 시간 초과. 웹에 게시된 시트인지, gid가 맞는지 확인해야 한다.", true);
+    $("sourceStatus").textContent = "응답 시간 초과";
+  }, 15000);
+}
+
+function tableToObjects(table){
+  const cols = (table.cols || []).map((c,i)=>clean(c.label || c.id || `col${i}`));
+  return (table.rows || []).map(row => {
+    const obj = {};
+    cols.forEach((name,i)=>{
+      const cell = row.c && row.c[i];
+      obj[name] = cell ? (cell.f ?? cell.v ?? "") : "";
+    });
+    return obj;
+  });
+}
+
+function parseRows(rows){
+  return rows
+    .filter(r => r && Object.values(r).some(v => clean(v) !== ""))
+    .map(r => ({
+      월: clean(r["월"]),
+      권역: clean(r["권역"]) || "미지정",
+      세부권역: clean(r["세부권역"]) || "미지정",
+      모델: clean(r["모델"]) || "미지정",
+      색상: clean(r["색상"]) || "미지정",
+      __qty: normalizeQty(r["수량"]),
+      원본:r
+    }))
+    .filter(r => r.월 && r.__qty !== 0);
+}
+
+function buildFilters(){
+  const models = uniq(rawRows.map(r=>r.모델));
+  const colors = uniq(rawRows.map(r=>r.색상));
+  const regions = uniq(rawRows.map(r=>r.권역));
+  selectedRegions = new Set(regions);
+
+  $("modelFilter").innerHTML = `<option value="">전체 모델</option>` + models.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
+  $("colorFilter").innerHTML = `<option value="">전체 컬러</option>` + colors.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
+  $("regionChips").innerHTML = regions.map(v => `<button class="chip active" data-region="${escapeAttr(v)}">${escapeHtml(v)}</button>`).join("");
+
+  document.querySelectorAll(".chip[data-region]").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const v = btn.dataset.region;
+      if(selectedRegions.has(v)){ selectedRegions.delete(v); btn.classList.remove("active"); }
+      else{ selectedRegions.add(v); btn.classList.add("active"); }
+      updateDashboard();
+    });
+  });
+}
+
+function getFilteredRows(){
+  const model = $("modelFilter").value;
+  const color = $("colorFilter").value;
+  return rawRows.filter(r =>
+    (!model || r.모델 === model) &&
+    (!color || r.색상 === color) &&
+    selectedRegions.has(r.권역)
+  );
+}
+
+function updateDashboard(){
+  const rows = getFilteredRows();
+  const months = uniq(rows.map(r=>monthLabel(r.월)));
+  const total = rows.reduce((a,r)=>a+r.__qty,0);
+  const avg = months.length ? Math.round(total/months.length) : 0;
+  const colorMap = sumBy(rows, r=>r.색상);
+  const regionMap = sumBy(rows, r=>r.권역);
+  const modelMap = sumBy(rows, r=>r.모델);
+  const [tc,tq] = topEntry(colorMap);
+  const [tr,rq] = topEntry(regionMap);
+
+  $("recordBadge").textContent = `레코드 ${fmt(rows.length)}건`;
+  $("periodBadge").textContent = months.length ? `기간 ${months[0]} ~ ${months[months.length-1]}` : "기간 -";
+  $("totalQty").textContent = fmt(total);
+  $("avgQty").textContent = fmt(avg);
+  $("topColor").textContent = tc;
+  $("topColorQty").textContent = `${fmt(tq)} units`;
+  $("topRegion").textContent = tr;
+  $("topRegionQty").textContent = `${fmt(rq)} units`;
+  $("sideRecord").textContent = `${fmt(rows.length)} records · ${fmt(total)} units`;
+  $("sideColors").textContent = Object.entries(colorMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k} ${fmt(v)}`).join(" / ") || "-";
+  $("sideModels").textContent = Object.entries(modelMap).sort((a,b)=>b[1]-a[1]).slice(0,3).map(([k,v])=>`${k} ${fmt(v)}`).join(" / ") || "-";
+  drawRankList(modelMap, total);
+
+  drawMonthly(rows, months);
+  drawModel(rows, months, modelMap);
+  const colorTop = topN(colorMap,12);
+  const regionTop = topN(regionMap,12);
+  drawBar("colorChart", colorTop.labels, colorTop.values);
+  drawBar("regionChart", regionTop.labels, regionTop.values);
+  drawTable(rows, total);
+}
+
+function drawMonthly(rows, months){
+  const map = sumBy(rows, r=>monthLabel(r.월));
+  drawBar("monthlyChart", months, months.map(m=>map[m]||0));
+}
+
+function drawModel(rows, months, modelMap){
+  const topModels = Object.entries(modelMap).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>m);
+  const datasets = topModels.map(m=>({
+    label:m,
+    data:months.map(mm=>rows.filter(r=>r.모델===m && monthLabel(r.월)===mm).reduce((a,r)=>a+r.__qty,0)),
+    borderWidth:3,
+    tension:.35,
+    fill:false
+  }));
+  drawChart("modelChart", { type:"line", data:{labels:months,datasets}, options:baseOptions() });
+}
+
+function drawBar(id, labels, values){
+  drawChart(id, {
+    type:"bar",
+    data:{labels,datasets:[{label:"수량",data:values,borderWidth:1,borderRadius:10}]},
+    options:baseOptions()
+  });
+}
+
+function drawChart(id, config){
+  if(charts[id]) charts[id].destroy();
+  charts[id] = new Chart($(id), config);
+}
+
+function baseOptions(){
+  return {
+    responsive:true,
+    maintainAspectRatio:false,
+    plugins:{
+      legend:{display:true,labels:{boxWidth:18}},
+      tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label || "수량"}: ${fmt(ctx.raw)} units`}}
+    },
+    scales:{
+      x:{grid:{color:"rgba(15,23,42,.06)"},ticks:{color:"#4b5563"}},
+      y:{beginAtZero:true,grid:{color:"rgba(15,23,42,.08)"},ticks:{color:"#4b5563",callback:v=>fmt(v)}}
+    }
+  };
+}
+
+function topN(map, n){
+  const arr = Object.entries(map).sort((a,b)=>b[1]-a[1]).slice(0,n);
+  return {labels:arr.map(a=>a[0]), values:arr.map(a=>a[1])};
+}
+
+function drawRankList(modelMap, total){
+  const arr = Object.entries(modelMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
+  $("rankList").innerHTML = arr.map(([name,qty],i)=>`
+    <div class="rankItem">
+      <div class="rankName">${i+1}. ${escapeHtml(name)}</div>
+      <div class="rankMeta">${fmt(qty)} units · ${total ? (qty/total*100).toFixed(1) : "0.0"}%</div>
+    </div>
+  `).join("");
+}
+
+function drawTable(rows, total){
+  const combo = {};
+  rows.forEach(r=>{
+    const key = `${r.모델}|||${r.색상}|||${r.권역}`;
+    if(!combo[key]) combo[key] = {model:r.모델,color:r.색상,region:r.권역,qty:0};
+    combo[key].qty += r.__qty;
+  });
+  const arr = Object.values(combo).sort((a,b)=>b.qty-a.qty).slice(0,60);
+  $("summaryTable").innerHTML = arr.map((r,i)=>`
+    <tr>
+      <td>${i+1}</td><td>${escapeHtml(r.model)}</td><td>${escapeHtml(r.color)}</td><td>${escapeHtml(r.region)}</td>
+      <td class="num">${fmt(r.qty)}</td><td class="num">${total ? (r.qty/total*100).toFixed(1) : "0.0"}%</td>
+    </tr>
+  `).join("");
+}
+
+function exportFilteredCsv(){
+  const rows = getFilteredRows();
+  const header = ["월","권역","세부권역","모델","색상","수량"];
+  const body = rows.map(r=>[r.월,r.권역,r.세부권역,r.모델,r.색상,r.__qty]);
+  const csv = [header,...body].map(row=>row.map(v=>`"${String(v).replaceAll('"','""')}"`).join(",")).join("\n");
+  const blob = new Blob(["\ufeff"+csv],{type:"text/csv;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "color_sales_filtered.csv";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));}
+function escapeAttr(s){return escapeHtml(s).replace(/"/g,"&quot;");}
+
+$("reloadBtn").addEventListener("click",loadData);
+$("resetBtn").addEventListener("click",()=>{$("sheetId").value=DEFAULT_SHEET_ID;$("gid").value=DEFAULT_GID;loadData();});
+$("modelFilter").addEventListener("change",updateDashboard);
+$("colorFilter").addEventListener("change",updateDashboard);
+$("exportBtn").addEventListener("click",exportFilteredCsv);
+loadData();
+</script>
+</body>
+</html>
