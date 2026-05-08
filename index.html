@@ -75,6 +75,7 @@ td.num{text-align:right;font-variant-numeric:tabular-nums}
 .sideMetric{display:grid;grid-template-columns:1fr;gap:12px}
 .rankList{display:flex;flex-direction:column;gap:10px;margin-top:12px}
 .rankItem{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fff}
+.rankItem.top5{background:#eef8e8;border-color:#cfe8bd}
 .rankName{font-size:14px;font-weight:850;letter-spacing:-.02em}
 .rankMeta{font-size:12px;color:var(--muted);margin-top:4px}
 .loading{position:fixed;right:28px;bottom:28px;background:#171717;color:white;border-radius:999px;padding:12px 18px;font-size:13px;font-weight:800;box-shadow:var(--shadow);display:none;z-index:10}
@@ -360,6 +361,22 @@ function buildFilters(){
   });
 }
 
+function updateDependentFilterOptions(){
+  const productType = $("productTypeFilter").value;
+  const currentModel = $("modelFilter").value;
+  const currentColor = $("colorFilter").value;
+
+  const baseRows = rawRows.filter(r => !productType || r.제품상품 === productType);
+  const models = uniq(baseRows.map(r=>r.모델));
+  const colors = uniq(baseRows.map(r=>r.색상));
+
+  $("modelFilter").innerHTML = `<option value="">전체 모델</option>` + models.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
+  $("colorFilter").innerHTML = `<option value="">전체 컬러</option>` + colors.map(v=>`<option>${escapeHtml(v)}</option>`).join("");
+
+  if(models.includes(currentModel)) $("modelFilter").value = currentModel;
+  if(colors.includes(currentColor)) $("colorFilter").value = currentColor;
+}
+
 function getFilteredRows(){
   const model = $("modelFilter").value;
   const color = $("colorFilter").value;
@@ -458,7 +475,7 @@ function topN(map, n){
 function drawRankList(modelMap, total){
   const arr = Object.entries(modelMap).sort((a,b)=>b[1]-a[1]).slice(0,8);
   $("rankList").innerHTML = arr.map(([name,qty],i)=>`
-    <div class="rankItem">
+    <div class="rankItem ${i < 5 ? "top5" : ""}">
       <div class="rankName">${i+1}. ${escapeHtml(name)}</div>
       <div class="rankMeta">${fmt(qty)} units · ${total ? (qty/total*100).toFixed(1) : "0.0"}%</div>
     </div>
@@ -501,7 +518,7 @@ $("reloadBtn").addEventListener("click",loadData);
 $("resetBtn").addEventListener("click",()=>{$("sheetId").value=DEFAULT_SHEET_ID;$("gid").value=DEFAULT_GID;loadData();});
 $("modelFilter").addEventListener("change",updateDashboard);
 $("colorFilter").addEventListener("change",updateDashboard);
-$("productTypeFilter").addEventListener("change",updateDashboard);
+$("productTypeFilter").addEventListener("change",()=>{updateDependentFilterOptions(); updateDashboard();});
 $("exportBtn").addEventListener("click",exportFilteredCsv);
 loadData();
 </script>
